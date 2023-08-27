@@ -9,6 +9,7 @@ const server = fastify({
   logger: true,
 });
 
+server.register(import('@fastify/formbody'));
 server.register(UserModule);
 
 server.register(AuthPlugin, {
