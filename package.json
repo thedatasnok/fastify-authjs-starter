@@ -25,6 +25,7 @@
   "devDependencies": {
     "@types/node": "^20.5.6",
     "drizzle-kit": "^0.19.13",
+    "pino-pretty": "^10.2.0",
     "tsx": "^3.12.7",
     "typescript": "^5.2.2"
   }

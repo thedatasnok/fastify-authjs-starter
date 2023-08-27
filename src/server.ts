@@ -6,7 +6,14 @@ import { db } from './db';
 import { UserModule } from './users';
 
 const server = fastify({
-  logger: true,
+  logger:
+    process.env.NODE_ENV !== 'production'
+      ? {
+          transport: {
+            target: 'pino-pretty',
+          },
+        }
+      : true,
 });
 
 server.register(import('@fastify/formbody'));
