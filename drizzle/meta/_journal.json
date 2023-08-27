@@ -1,0 +1,13 @@
+{
+  "version": "5",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1693164608377,
+      "tag": "0000_lethal_gambit",
+      "breakpoints": true
+    }
+  ]
+}
