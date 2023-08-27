@@ -1,7 +1,6 @@
 import { Auth } from '@auth/core';
 import type { AuthAction, AuthConfig } from '@auth/core/types';
 import fp from 'fastify-plugin';
-import { Stream } from 'stream';
 
 export interface FastifyAuthConfig extends AuthConfig {
   prefix?: string;
@@ -20,6 +19,7 @@ const ACTIONS: AuthAction[] = [
 
 export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
   const { prefix = '/auth' } = options;
+
   options.secret ??= process.env.AUTH_SECRET;
   options.trustHost ??= !!(
     process.env.AUTH_TRUST_HOST ??
@@ -31,12 +31,15 @@ export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
     url: prefix + '/*',
     method: ['GET', 'POST'],
     handler: async (request, reply) => {
-      const url = `${request.protocol}://${request.hostname}${request.url}`;
-      const action = request.url
+      const url = new URL(
+        `${request.protocol}://${request.hostname}${request.url}`
+      );
+
+      const action = url.pathname
         .slice(prefix.length + 1)
         .split('/')[0] as AuthAction;
 
-      if (!ACTIONS.includes(action) || !request.url.startsWith(prefix + '/')) {
+      if (!ACTIONS.includes(action) || !url.pathname.startsWith(prefix + '/')) {
         return reply.callNotFound();
       }
 
