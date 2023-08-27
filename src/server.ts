@@ -4,6 +4,7 @@ import fastify from 'fastify';
 import { AuthPlugin } from './auth';
 import { db } from './db';
 import { UserModule } from './users';
+import qs from 'qs';
 
 const server = fastify({
   logger:
@@ -16,7 +17,10 @@ const server = fastify({
       : true,
 });
 
-server.register(import('@fastify/formbody'));
+server.register(import('@fastify/formbody'), {
+  parser: (str) => qs.parse(str),
+});
+
 server.register(UserModule);
 
 server.register(AuthPlugin, {
