@@ -29,7 +29,7 @@ server.register(AuthPlugin, {
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID,
-      clientSecret: process.env.DISOCRD_CLIENT_SECRET,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET,
     }),
   ],
 });
