@@ -1,5 +1,6 @@
 import { Auth } from '@auth/core';
 import type { AuthAction, AuthConfig } from '@auth/core/types';
+import { FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 
 export interface FastifyAuthConfig extends AuthConfig {
@@ -16,6 +17,35 @@ const ACTIONS: AuthAction[] = [
   'signout',
   'verify-request',
 ];
+
+const toWebRequest = (url: URL, request: FastifyRequest): Request => {
+  let body: string | null = null;
+
+  if (request.headers['content-type'] === 'application/x-www-form-urlencoded') {
+    const params = new URLSearchParams();
+    const entries = Object.entries(request.body as Record<string, any>);
+
+    for (let [key, value] of entries) {
+      if (Array.isArray(value)) {
+        value.forEach((nestedValue) => params.append(key, nestedValue));
+      } else {
+        params.append(key, value);
+      }
+    }
+
+    body = params.toString();
+  } else if (request.headers['content-type'] === 'application/json') {
+    body = JSON.stringify(request.body);
+  }
+
+  const webRequest = new Request(url, {
+    method: request.method,
+    headers: request.headers as any,
+    body: body ?? (request.body as any),
+  });
+
+  return webRequest;
+};
 
 export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
   const { prefix = '/auth' } = options;
@@ -43,18 +73,12 @@ export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
         return reply.callNotFound();
       }
 
-      const convertedRequest = new Request(url, {
-        body: request.body as any,
-        headers: request.headers as any,
-        method: request.method,
-      });
+      const webRequest = toWebRequest(url, request);
+      const webResponse = await Auth(webRequest, options);
 
-      const response = await Auth(convertedRequest, options);
-
-      reply.status(response.status);
-      reply.headers(Object.fromEntries(response.headers.entries()));
-
-      reply.send(await response.text());
+      reply.headers(Object.fromEntries(webResponse.headers.entries()));
+      reply.status(webResponse.status);
+      reply.send(await webResponse.text());
     },
   });
 

@@ -1,8 +1,7 @@
-import { migrate } from 'drizzle-orm/libsql/migrator';
-import { db } from './db';
-import { startServer } from './server';
-import crypto from 'node:crypto';
 import 'dotenv/config';
+import { migrate } from 'drizzle-orm/libsql/migrator';
+import crypto from 'node:crypto';
+import { db } from './db';
 
 // @ts-ignore
 globalThis.crypto = crypto;
@@ -12,5 +11,6 @@ globalThis.crypto = crypto;
     migrationsFolder: 'drizzle',
   });
 
-  startServer();
+  // dynamic import to allow dotenv to load before anything is processed further
+  (await import('./server')).startServer();
 })();
