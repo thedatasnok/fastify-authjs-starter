@@ -1,6 +1,6 @@
 import { Auth } from '@auth/core';
 import type { AuthAction, AuthConfig, Session } from '@auth/core/types';
-import { FastifyRequest } from 'fastify';
+import { FastifyBodyParser, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 
 export interface FastifyAuthConfig extends AuthConfig {
@@ -19,29 +19,10 @@ const ACTIONS: AuthAction[] = [
 ];
 
 const toWebRequest = (url: URL, request: FastifyRequest): Request => {
-  let body: string | null = null;
-
-  if (request.headers['content-type'] === 'application/x-www-form-urlencoded') {
-    const params = new URLSearchParams();
-    const entries = Object.entries(request.body as Record<string, any>);
-
-    for (let [key, value] of entries) {
-      if (Array.isArray(value)) {
-        value.forEach((nestedValue) => params.append(key, nestedValue));
-      } else {
-        params.append(key, value);
-      }
-    }
-
-    body = params.toString();
-  } else if (request.headers['content-type'] === 'application/json') {
-    body = JSON.stringify(request.body);
-  }
-
   const webRequest = new Request(url, {
     method: request.method,
     headers: request.headers as any,
-    body: body ?? (request.body as any),
+    body: request.body as any,
   });
 
   return webRequest;
@@ -56,6 +37,19 @@ export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
     process.env.VERCEL ??
     process.env.NODE_ENV !== 'production'
   );
+
+  const parserOptions = { parseAs: 'buffer' } as const;
+  const stringParser: FastifyBodyParser<Buffer> = (_request, body, done) => {
+    done(null, body.toString());
+  };
+
+  server.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    parserOptions,
+    stringParser
+  );
+
+  server.addContentTypeParser('application/json', parserOptions, stringParser);
 
   server.route({
     url: prefix + '/*',
