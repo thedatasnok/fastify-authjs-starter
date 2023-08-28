@@ -1,5 +1,5 @@
 import { Auth } from '@auth/core';
-import type { AuthAction, AuthConfig } from '@auth/core/types';
+import type { AuthAction, AuthConfig, Session } from '@auth/core/types';
 import { FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 
@@ -84,3 +84,26 @@ export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
 
   done();
 });
+
+export type GetSessionResult = Promise<Session | null>;
+
+export const getSession = async (
+  req: FastifyRequest,
+  options: AuthConfig
+): GetSessionResult => {
+  options.secret ??= process.env.AUTH_SECRET;
+  options.trustHost ??= true;
+
+  const url = new URL('/api/auth/session', req.url);
+  const webRequest = toWebRequest(url, req);
+
+  const webResponse = await Auth(webRequest, options);
+
+  const { status = 200 } = webResponse;
+
+  const data = await webResponse.json();
+
+  if (!data || !Object.keys(data).length) return null;
+  if (status === 200) return data;
+  throw new Error(data.message);
+};
