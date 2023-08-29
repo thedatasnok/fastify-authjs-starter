@@ -81,7 +81,19 @@ export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
       const webResponse = await Auth(webRequest, options);
 
       reply.headers(Object.fromEntries(webResponse.headers.entries()));
-      console.log(webResponse.headers);
+
+      webResponse.headers.forEach((value, key) => {
+        // this is potentially error prone as the RFC allows cookies to contain commas
+        // however, the `getSetCookie()` method was introduced in Node 19.7.0 (not in a LTS release yet)
+        if (key === 'set-cookie') {
+          value
+            .split(',')
+            .forEach((cookie) => reply.header('set-cookie', cookie.trim()));
+        } else {
+          reply.header(key, value);
+        }
+      });
+
       reply.status(webResponse.status);
       reply.send(await webResponse.text());
     },
