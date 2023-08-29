@@ -3,9 +3,19 @@ import type { AuthAction, AuthConfig, Session } from '@auth/core/types';
 import { FastifyBodyParser, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 
+declare module 'fastify' {
+  interface FastifyInstance {
+    auth: {
+      getSession(request: FastifyRequest): GetSessionResult;
+    };
+  }
+}
+
 export interface FastifyAuthConfig extends AuthConfig {
   prefix?: string;
 }
+
+export type GetSessionResult = Promise<Session | null>;
 
 const ACTIONS: AuthAction[] = [
   'callback',
@@ -71,33 +81,30 @@ export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
       const webResponse = await Auth(webRequest, options);
 
       reply.headers(Object.fromEntries(webResponse.headers.entries()));
+      console.log(webResponse.headers);
       reply.status(webResponse.status);
       reply.send(await webResponse.text());
     },
   });
 
+  server.decorate('auth', {
+    async getSession(request: FastifyRequest): GetSessionResult {
+      const url = new URL(
+        `${request.protocol}://${request.hostname}/${options.prefix}/session`
+      );
+
+      const webRequest = toWebRequest(url, request);
+      const webResponse = await Auth(webRequest, options);
+
+      const { status = 200 } = webResponse;
+
+      const data = await webResponse.json();
+
+      if (!data || !Object.keys(data).length) return null;
+      if (status === 200) return data;
+      throw new Error(data.message);
+    },
+  });
+
   done();
 });
-
-export type GetSessionResult = Promise<Session | null>;
-
-export const getSession = async (
-  req: FastifyRequest,
-  options: AuthConfig
-): GetSessionResult => {
-  options.secret ??= process.env.AUTH_SECRET;
-  options.trustHost ??= true;
-
-  const url = new URL('/api/auth/session', req.url);
-  const webRequest = toWebRequest(url, req);
-
-  const webResponse = await Auth(webRequest, options);
-
-  const { status = 200 } = webResponse;
-
-  const data = await webResponse.json();
-
-  if (!data || !Object.keys(data).length) return null;
-  if (status === 200) return data;
-  throw new Error(data.message);
-};
