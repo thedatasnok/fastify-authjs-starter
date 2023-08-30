@@ -84,7 +84,7 @@ export const AuthPlugin = fp<FastifyAuthConfig>((server, options, done) => {
 
       webResponse.headers.forEach((value, key) => {
         // this is potentially error prone as the RFC allows cookies to contain commas
-        // however, the `getSetCookie()` method was introduced in Node 19.7.0 (not in a LTS release yet)
+        // in Node 19+ this is not an issue as headers are repeated
         if (key === 'set-cookie') {
           value
             .split(',')
